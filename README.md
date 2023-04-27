@@ -19,6 +19,6 @@ Install required packages by running `conda env create -f environment.yml`. Addi
 
 # Data
 
-The data set has been taken from the sutyd by [1] and can be downloaded from the [here](https://journals.plos.org/plosbiology/article?id=10.1371/journal.pbio.2005143#pbio.2005143.s010).
+The data set has been taken from the study by [1] and can be downloaded from the [here](https://journals.plos.org/plosbiology/article?id=10.1371/journal.pbio.2005143#pbio.2005143.s010).
 
 `[1] Heather Hall, Dalia Perelman, Alessandra Breschi, Patricia Limcaoco, Ryan Kellogg, Tracey McLaughlin, and Michael Snyder. Glucotypes reveal new patterns of glucose dysregulation. *PLoS biology*, 16(7):e2005143, 2018.`

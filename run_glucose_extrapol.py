@@ -12,7 +12,7 @@ import random
 from torch.utils.tensorboard import SummaryWriter
 
 # load model
-from latent_ode.trainer_glunet import LatentODEWrapper
+from latent_ode.trainer_glunet_extrapol import LatentODEWrapper
 from latent_ode.eval_glunet import test
 
 # utils for darts
@@ -40,6 +40,14 @@ if __name__ == '__main__':
                                         input_chunk_length=in_len,
                                         use_static_covariates=True,
                                         max_samples_per_ts=max_samples_per_ts,)
+    dataset_test = SamplingDatasetInferenceDual(target_series=series['test']['target'],
+                                                covariates=series['test']['dynamic'],
+                                                n=out_len,
+                                                input_chunk_length=in_len,
+                                                output_chunk_length=out_len,
+                                                use_static_covariates=False,
+                                                max_samples_per_ts = None,
+                                                array_output_only=True,)
     
     # create model
     model = LatentODEWrapper(device = 'cuda',
@@ -52,15 +60,29 @@ if __name__ == '__main__':
     
     # train model
     model_path = 'output/model_glucose_extrapol.ckpt'
-    writer = SummaryWriter('output/tensorboard/glucose_extrapol')
-    model.fit(dataset_train,
-                dataset_train,
-                learning_rate = 1e-3,
-                batch_size = 32,
-                epochs = 100,
-                num_samples = 2,
-                device = 'cuda',
-                model_path = model_path,
-                trial = None,
-                logger = writer,
-                visualize=True,)
+    # writer = SummaryWriter('output/tensorboard/glucose_extrapol')
+    # model.fit(dataset_train,
+    #             dataset_train,
+    #             learning_rate = 1e-3,
+    #             batch_size = 32,
+    #             epochs = 100,
+    #             num_samples = 2,
+    #             device = 'cuda',
+    #             model_path = model_path,
+    #             trial = None,
+    #             logger = writer,
+    #             visualize=True,)
+    model.load(model_path, device='cuda')
+    
+    # evaluate model
+    predictions = model.predict(dataset_test,
+                                batch_size=32,
+                                num_samples=10,
+                                device='cuda')
+    trues = np.array([dataset_test.evalsample(i).values() for i in range(len(dataset_test))])
+    trues = (trues - scalers['target'].min_) / scalers['target'].scale_
+    predictions = (predictions - scalers['target'].min_) / scalers['target'].scale_
+    obsrv_std = 0.01 / scalers['target'].scale_
+    id_errors_sample, id_likelihood_sample, id_cal_errors_sample = test(trues, predictions, obsrv_std)
+    print(f'Mean of errors (MSE / MAE): {np.mean(id_errors_sample, axis=0)}')
+    print(f'Median of errors (MSE / MAE): {np.median(id_errors_sample, axis=0)}')

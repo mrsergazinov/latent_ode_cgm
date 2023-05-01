@@ -250,5 +250,62 @@ class LatentODEWrapper():
                                                save=True,
                                                experimentID=experimentID)
                     plt.pause(0.1)
+        torch.save({
+                    'args': None,
+                    'state_dict': self.model.state_dict(),
+                   }, model_path)
 
-            
+    def predict(self, test_dataset: SamplingDatasetDual, 
+                      batch_size: int = 32,
+                      num_samples: int = 100,
+                      device: str = 'cuda',
+                      use_tqdm: bool = False):
+        """
+        Predict the future target series given the supplied samples from the dataset.
+
+        Parameters
+        ----------
+        test_dataset : SamplingDatasetInferenceDual
+            The dataset to use for inference.
+        batch_size : int, optional
+            The batch size to use for inference, by default 32
+        num_samples : int, optional
+            The number of samples to use for inference, by default 100
+        
+        Returns
+        -------
+        Predictions
+            The predicted future target series in shape n x len_pred x num_samples, where
+            n is total number of predictions.
+        Logvar
+            The logvariance of the predicted future target series in shape n x len_pred.
+        """
+        # define data loader
+        test_loader = torch.utils.data.DataLoader(test_dataset,
+                                                  batch_size=batch_size,
+                                                  shuffle=False,
+                                                  drop_last=False)
+        num_batches = len(test_loader)
+        test_loader = latentode_utils.inf_generator(test_loader)
+
+        predictions = []
+        with torch.no_grad():
+            for itr in tqdm(range(num_batches)) if use_tqdm else range(num_batches):
+                batch = test_loader.__next__()
+                mask = torch.ones(batch[0].shape).to(device)
+                mask[:, 20:31, ...] = 0
+                observed_data = batch[0].clone().to(device)
+                observed_data[mask == 0] = 0
+                observed_tp = torch.arange(0, test_dataset.input_chunk_length).to(device) / 12
+                pred_y, info = self.model.get_reconstruction(observed_tp, 
+                                                             observed_data, 
+                                                             observed_tp, 
+                                                             mask = mask, 
+                                                             n_traj_samples = num_samples,
+                                                             mode = "interp")
+                pred_y = pred_y.detach().cpu().numpy()
+                predictions.append(pred_y)
+        predictions = np.concatenate(predictions, axis=1) # n_traj_samples x n_traj x n_tp x n_dim
+        predictions = predictions[:, :, 20:31, :]
+        
+        return predictions

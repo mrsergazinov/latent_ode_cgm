@@ -1,0 +1,4 @@
+/home/grads/m/mrsergazinov/.conda/envs/glunet/lib/python3.10/site-packages/torchdiffeq/_impl/misc.py:296: UserWarning: t is not on the same device as y0. Coercing to y0.device.
+  warnings.warn("t is not on the same device as y0. Coercing to y0.device.")
+Mean of errors (MSE / MAE): [0.04798426 0.16188662]
+Median of errors (MSE / MAE): [0.03742255 0.15608396]
